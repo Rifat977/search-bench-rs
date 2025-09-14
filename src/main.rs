@@ -9,6 +9,7 @@ use crate::tantivy_search::SearchEngine;
 
 use std::time::Instant;
 use serde::Serialize;
+use log::{info, error};
 
 
 #[derive(Serialize)]
@@ -24,6 +25,8 @@ async fn search(
 ) -> impl Responder {
     
     let q = query.get("q").cloned().unwrap_or_default();
+    info!("Search request received for query: '{}'", q);
+    
     let engine = engine.lock().await;
 
     let start = Instant::now();
@@ -31,35 +34,41 @@ async fn search(
     let result = engine.search(&q, 10);
 
     let duration = start.elapsed();
-
- 
-
-    
+    info!("Search completed in {:?}", duration);
 
     match result {
         Ok(products) => {
+            info!("Search successful, found {} products", products.len());
             let response = SearchResponse {
                 took_s: duration.as_secs_f64(),
                 results: products,
             };
             HttpResponse::Ok().json(response)
         }
-        Err(e) => HttpResponse::InternalServerError().body(format!("Search failed: {}", e)),
+        Err(e) => {
+            error!("Search failed: {}", e);
+            HttpResponse::InternalServerError().body(format!("Search failed: {}", e))
+        }
     }
 }
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    std::env::set_var("RUST_LOG", "info");
     env_logger::init();
 
-    let products = load_products("dataset/product.csv").expect("Fialed to load dataset");
+    info!("Starting search-bench server...");
+
+    let products = load_products("dataset/product.csv").expect("Failed to load dataset");
+    info!("Loaded {} products from dataset", products.len());
 
     let engine = SearchEngine::new().expect("Failed to create search engine");
     engine.index_products(&products).expect("Index failed");
+    info!("Search engine indexed successfully");
 
     let shared_engine = Arc::new(Mutex::new(engine));
 
-    println!("Server running at http://127.0.0.1:8000");
+    info!("Server running at http://127.0.0.1:8000");
 
     HttpServer::new(move || {
         App::new()
