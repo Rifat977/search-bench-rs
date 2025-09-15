@@ -16,9 +16,9 @@ impl SearchEngine {
         schema_builder.add_f64_field("price", STORED);
         schema_builder.add_text_field("currency", STORED);
         schema_builder.add_text_field("availability", STORED);
-        schema_builder.add_u64_field("reviews_count", STORED);
+        schema_builder.add_i64_field("reviews_count", STORED);
         schema_builder.add_f64_field("rating", STORED);
-        schema_builder.add_u64_field("discount", STORED);
+        schema_builder.add_text_field("discount", STORED);
         schema_builder.add_text_field("manufacturer", STORED);
         schema_builder.add_text_field("category", STORED);
 
@@ -55,8 +55,12 @@ impl SearchEngine {
             doc.add_text(currency, &p.currency);
             doc.add_text(availability, &p.availability);
 
-            doc.add_text(reviews_count, &p.reviews_count);
-            doc.add_text(rating, &p.rating);
+            if let Some(reviews_count_val) = p.reviews_count {
+                doc.add_i64(reviews_count, reviews_count_val as i64);
+            }
+            if let Some(rating_val) = p.rating {
+                doc.add_f64(rating, rating_val);
+            }
             doc.add_text(discount, &p.discount);
 
             doc.add_text(manufacturer, &p.manufacturer);
@@ -128,14 +132,11 @@ impl SearchEngine {
                     .to_string(),
                 reviews_count: retrieved
                     .get_first(reviews_count)
-                    .and_then(|f| f.as_text())
-                    .unwrap_or("")
-                    .to_string(),
+                    .and_then(|f| f.as_i64())
+                    .map(|v| v as i32),
                 rating: retrieved
                     .get_first(rating)
-                    .and_then(|f| f.as_text())
-                    .unwrap_or("")
-                    .to_string(),
+                    .and_then(|f| f.as_f64()),
                 discount: retrieved
                     .get_first(discount)
                     .and_then(|f| f.as_text())

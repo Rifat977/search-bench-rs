@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
+use sqlx::FromRow;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct Product {
     #[serde(default)]
     pub title: String,
@@ -15,9 +16,9 @@ pub struct Product {
     #[serde(default)]
     pub availability: String,
     #[serde(default)]
-    pub reviews_count: String,
+    pub reviews_count: Option<i32>,
     #[serde(default)]
-    pub rating: String,
+    pub rating: Option<f64>,
     #[serde(default)]
     pub discount: String,
     #[serde(default)]
